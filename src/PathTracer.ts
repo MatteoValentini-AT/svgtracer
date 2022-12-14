@@ -1,4 +1,4 @@
-import { Point, Vector2D } from './Geometry';
+import { Point, Vector2D } from './Geometry.js';
 
 class PathTracer {
 	private origin: Vector2D;
@@ -45,18 +45,27 @@ class PathTracer {
 		return this.points[this.points.length - 1].position.clone();
 	};
 
-	parseM = (segment: string) => {
+	parseM = (segment: string, isFirst: boolean = false) => {
 		const isRelative = segment.startsWith('m');
 		const args = PathTracer.getArgs(segment);
 		if (args.length < 2) throw new Error('Invalid path data');
-		let point = isRelative ? this.origin.clone() : new Vector2D(0, 0);
-		for (let i = 0; i < args.length; i += 2) {
-			isRelative
-				? point.add(args[i], args[i + 1])
-				: point.set(args[i], args[i + 1]);
+		if (isRelative && !(isFirst && this.points.length == 0))
+			this.points.push(
+				new Point(this.origin.clone().add(args[0], args[1]), new Vector2D(0, 0))
+			);
+		else
+			this.points.push(
+				new Point(new Vector2D(args[0], args[1]), new Vector2D(0, 0))
+			);
+		for (let i = 2; i < args.length; i += 2) {
+			const point = new Vector2D(args[i], args[i + 1]);
+			isRelative && point.addVector(this.lastPointPos());
+			const normal = point
+				.clone()
+				.subVector(this.lastPointPos())
+				.normalizedNormal();
+			this.points.push(new Point(point, normal));
 		}
-		this.points.push(new Point(point, new Vector2D(0, 0)));
-		this.lastControlPoint = point;
 	};
 
 	parseL = (segment: string) => {
@@ -124,10 +133,11 @@ class PathTracer {
 			const stepSize = 0.1;
 			for (let t = 0; t < 1 - stepSize; t += stepSize) {
 				const point = p0
+					.clone()
 					.scale(-t * t * t + 3 * t * t - 3 * t + 1)
-					.addVector(p1.scale(3 * t * t * t - 6 * t * t + 3 * t))
-					.addVector(p2.scale(-3 * t * t * t + 3 * t * t))
-					.addVector(p3.scale(t * t * t));
+					.addVector(p1.clone().scale(3 * t * t * t - 6 * t * t + 3 * t))
+					.addVector(p2.clone().scale(-3 * t * t * t + 3 * t * t))
+					.addVector(p3.clone().scale(t * t * t));
 				const normal = point
 					.clone()
 					.subVector(this.lastPointPos())
@@ -163,10 +173,11 @@ class PathTracer {
 			const stepSize = 0.1;
 			for (let t = 0; t < 1 - stepSize; t += stepSize) {
 				const point = p0
+					.clone()
 					.scale(-t * t * t + 3 * t * t - 3 * t + 1)
-					.addVector(p1.scale(3 * t * t * t - 6 * t * t + 3 * t))
-					.addVector(p2.scale(-3 * t * t * t + 3 * t * t))
-					.addVector(p3.scale(t * t * t));
+					.addVector(p1.clone().scale(3 * t * t * t - 6 * t * t + 3 * t))
+					.addVector(p2.clone().scale(-3 * t * t * t + 3 * t * t))
+					.addVector(p3.clone().scale(t * t * t));
 				const normal = point
 					.clone()
 					.subVector(this.lastPointPos())
@@ -198,9 +209,10 @@ class PathTracer {
 			const stepSize = 0.1666;
 			for (let t = 0; t < 1 - stepSize; t += stepSize) {
 				const point = p0
+					.clone()
 					.scale(t * t - 2 * t + 1)
-					.addVector(p1.scale(-2 * t * t + 2 * t))
-					.addVector(p2.scale(t * t));
+					.addVector(p1.clone().scale(-2 * t * t + 2 * t))
+					.addVector(p2.clone().scale(t * t));
 				const normal = point
 					.clone()
 					.subVector(this.lastPointPos())
@@ -234,9 +246,10 @@ class PathTracer {
 			const stepSize = 0.1666;
 			for (let t = 0; t < 1 - stepSize; t += stepSize) {
 				const point = p0
+					.clone()
 					.scale(t * t - 2 * t + 1)
-					.addVector(p1.scale(-2 * t * t + 2 * t))
-					.addVector(p2.scale(t * t));
+					.addVector(p1.clone().scale(-2 * t * t + 2 * t))
+					.addVector(p2.clone().scale(t * t));
 				const normal = point
 					.clone()
 					.subVector(this.lastPointPos())
@@ -254,9 +267,10 @@ class PathTracer {
 	};
 
 	parseZ = (segment: string) => {
-		this.points.push(
-			new Point(this.points[0].position.clone(), new Vector2D(0, 0))
-		);
+		if (!this.points[0].position.equals(this.lastPointPos()))
+			this.points.push(
+				new Point(this.points[0].position.clone(), new Vector2D(0, 0))
+			);
 	};
 
 	getPoints = () => {

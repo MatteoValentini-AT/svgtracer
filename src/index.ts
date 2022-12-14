@@ -1,9 +1,9 @@
-import SVG from './SVG';
-import SVGPath from './SVGPath';
-import SVGPathSection from './SVGPathSection';
-import PathStyle from './PathStyle';
-import TransformMatrix from './TransformMatrix';
-import { Vector2D, Point } from './Geometry';
+import SVG from './SVG.js';
+import SVGPath from './SVGPath.js';
+import SVGPathSection from './SVGPathSection.js';
+import PathStyle from './PathStyle.js';
+import TransformMatrix from './TransformMatrix.js';
+import { Vector2D, Point, BoundingBox } from './Geometry.js';
 
 export default SVG;
 export {
@@ -14,4 +14,5 @@ export {
 	TransformMatrix,
 	Vector2D,
 	Point,
+	BoundingBox,
 };

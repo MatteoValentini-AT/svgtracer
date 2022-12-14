@@ -102,37 +102,32 @@ class TransformMatrix {
 			const [arg1, arg2, arg3, arg4, arg5, arg6] = args
 				.split(',')
 				.map((arg) => parseFloat(arg));
-			switch (transform) {
-				case 'translate':
-					if (arg2 === undefined) matrix.translate(arg1, 0);
-					else matrix.translate(arg1, arg2);
-					break;
-				case 'scale':
-					if (arg2 === undefined) matrix.scale(arg1, arg1);
-					else matrix.scale(arg1, arg2);
-					break;
-				case 'rotate':
-					if (arg2 != undefined && arg3 != undefined)
-						matrix.rotateAround(arg1, arg2, arg3);
-					else matrix.rotate(arg1);
-					break;
-				case 'skewX':
-					matrix.skewX(arg1);
-					break;
-				case 'skewY':
-					matrix.skewY(arg1);
-					break;
-				case 'matrix':
-					matrix.multiply(
-						new TransformMatrix([
-							[arg1, arg2, arg3],
-							[arg4, arg5, arg6],
-							[0, 0, 1],
-						])
-					);
-				default:
-					throw new Error('Invalid transform: ' + transform);
-			}
+			if (transform === 'translate') {
+				if (arg2 === undefined) matrix.translate(arg1, 0);
+				else matrix.translate(arg1, arg2);
+			} else if (transform === 'scale') {
+				if (arg2 === undefined) matrix.scale(arg1, arg1);
+				else matrix.scale(arg1, arg2);
+			} else if (transform === 'rotate') {
+				if (arg2 != undefined && arg3 != undefined)
+					matrix.rotateAround(arg1, arg2, arg3);
+				else matrix.rotate(arg1);
+				break;
+			} else if (transform === 'skewX') {
+				matrix.skewX(arg1);
+				break;
+			} else if (transform === 'skewY') {
+				matrix.skewY(arg1);
+				break;
+			} else if (transform === 'matrix') {
+				matrix.multiply(
+					new TransformMatrix([
+						[arg1, arg2, arg3],
+						[arg4, arg5, arg6],
+						[0, 0, 1],
+					])
+				);
+			} else throw new Error('Invalid transform: ' + transform);
 		}
 		return matrix;
 	};
