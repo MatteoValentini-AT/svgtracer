@@ -1,0 +1,17 @@
+{
+  "name": "svgtracer",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "repository": "https://github.com/MatteoValentini-AT/svgtracer.git",
+  "author": "Matteo Valentini",
+  "license": "GPL-3.0",
+  "private": false,
+  "devDependencies": {
+    "@types/node": "^18.11.15",
+    "typescript": "^4.9.4"
+  },
+  "files": [
+	"lib/**/*"
+  ]
+}
