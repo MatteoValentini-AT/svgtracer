@@ -1,6 +1,6 @@
 {
   "name": "svgtracer",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "type": "module",
@@ -18,5 +18,11 @@
   ],
   "dependencies": {
     "xmldom": "^0.6.0"
-  }
+  },
+  "keywords": [
+	"svg",
+	"svg tracer",
+	"path tracer",
+	"svg path tracer"
+  ]
 }

@@ -35,4 +35,13 @@ const traceSVG = (
 };
 
 export default traceSVG;
-export { traceSVG, TraceOptions, SVG, SVGGroup, SVGPath, PathStyle, Color };
+export {
+	traceSVG,
+	TraceOptions,
+	TransformMatrix,
+	SVG,
+	SVGGroup,
+	SVGPath,
+	PathStyle,
+	Color,
+};
