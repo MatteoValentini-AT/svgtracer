@@ -1,13 +1,16 @@
-import { BoundingBox, Vector2D } from './Geometry.js';
-import PathStyle from './PathStyle.js';
-import SVGPathSection from './SVGPathSection.js';
-import TransformMatrix from './TransformMatrix.js';
+import SVG from './SVG.js';
+import { BoundingBox, Point, TransformMatrix, Vector2D } from './Geometry.js';
+import PathStyle, { Color } from './PathStyle.js';
+import SVGSubpath from './SVGSubpath.js';
+import PathTracer from './PathTracer.js';
 
 class SVGPath {
-	private transform: TransformMatrix;
-	private style: PathStyle;
-	private pathData: string;
-	private sections: SVGPathSection[] | null = null;
+	public subpaths: SVGSubpath[] = [];
+	public points: Point[] = [];
+	public boundingBox?: BoundingBox;
+	public style: PathStyle;
+	public transform: TransformMatrix;
+	root: SVG;
 
 	private static splitPathData = (pathData: string) => {
 		const regex = /[a-zA-Z][0-9\-.,\s]*/gm;
@@ -16,74 +19,97 @@ class SVGPath {
 		return matches;
 	};
 
-	constructor(pathData: string, transform: TransformMatrix, style: PathStyle) {
-		this.transform = transform;
-		this.style = style;
-		this.pathData = pathData;
-		if (!pathData || !(pathData.startsWith('M') || pathData.startsWith('m')))
-			throw new Error('Invalid path data');
+	constructor(
+		root: SVG,
+		node: Node,
+		style?: PathStyle,
+		transform?: TransformMatrix
+	) {
+		this.root = root;
+		this.style = new PathStyle(style);
+		this.transform = new TransformMatrix(transform);
+		if ((node as any).hasAttribute('fill'))
+			this.style.fill = new Color((node as any).getAttribute('fill'));
+		if ((node as any).hasAttribute('stroke'))
+			this.style.stroke = new Color((node as any).getAttribute('stroke'));
+		if ((node as any).hasAttribute('stroke-width'))
+			this.style.strokeWidth = parseFloat(
+				(node as any).getAttribute('stroke-width')
+			);
+		if (!(node as any).hasAttribute('d')) return;
+		const pathData = SVGPath.splitPathData((node as any).getAttribute('d'));
+		if (root.traceOptions.subpaths) this.splitSubpaths(pathData);
+		else {
+			const tracer = new PathTracer(
+				root.traceOptions.resolution,
+				new Vector2D(0, 0),
+				true
+			);
+			pathData.forEach((segment) => {
+				tracer.trace(segment);
+			});
+			this.points = tracer.points.map((point) => {
+				return new Point(
+					this.transform.apply(point.position),
+					this.transform.apply(point.normal)
+				);
+			});
+			this.boundingBox = tracer.boundingBox;
+		}
 	}
 
-	getSections = (): SVGPathSection[] => {
-		if (this.sections) return this.sections;
-		this.sections = [];
-		const pathData = this.pathData.replace(/[\n\r\t]/gm, '');
-		const pathDataSegments = SVGPath.splitPathData(pathData);
-		const boundingBoxes: BoundingBox[] = [];
+	private splitSubpaths = (segments: string[]) => {
 		let currentSegments: string[] = [];
-		let origin = new Vector2D(0, 0);
-		let first = true;
-		pathDataSegments.forEach((segment) => {
-			if (segment.startsWith('M') || segment.startsWith('m')) {
+		let boundingBoxes: BoundingBox[] = [];
+		segments.forEach((segment) => {
+			if (segment[0].toLowerCase().startsWith('m')) {
 				if (currentSegments.length > 0) {
-					const sectionSegments = currentSegments;
-					const isFirst = first;
-					const section = new SVGPathSection(
-						origin.clone(),
-						sectionSegments,
-						this.transform,
-						this.style,
-						isFirst
+					const subpath = new SVGSubpath(
+						this.root,
+						currentSegments,
+						new Vector2D(0, 0),
+						this.subpaths.length == 0
 					);
-					first = false;
-					origin = section.getEnd();
-					let isInside = false;
-					const bb = section.getBoundingBox();
-					boundingBoxes.forEach((b) => {
-						if (bb.isInsideOf(b)) isInside = true;
+					for (const boundingBox of boundingBoxes) {
+						if (subpath.boundingBox.isInsideOf(boundingBox)) {
+							subpath.isEnclosed = true;
+							break;
+						}
+					}
+					if (!subpath.isEnclosed) boundingBoxes.push(subpath.boundingBox);
+					subpath.points = subpath.points.map((point) => {
+						return new Point(
+							this.transform.apply(point.position),
+							this.transform.apply(point.normal)
+						);
 					});
-					if (!isInside) boundingBoxes.push(bb);
-					else section.fullyInside = true;
-					(this.sections as SVGPathSection[]).push(section);
+					this.subpaths.push(subpath);
 					currentSegments = [];
 				}
-				currentSegments.push(segment);
-			} else currentSegments.push(segment);
+			}
+			currentSegments.push(segment);
 		});
 		if (currentSegments.length > 0) {
-			const section = new SVGPathSection(
-				origin.clone(),
+			const subpath = new SVGSubpath(
+				this.root,
 				currentSegments,
-				this.transform,
-				this.style
+				new Vector2D(0, 0),
+				this.subpaths.length == 0
 			);
-			let isInside = false;
-			const bb = section.getBoundingBox();
-			boundingBoxes.forEach((b) => {
-				if (bb.isInsideOf(b)) isInside = true;
+			for (const boundingBox of boundingBoxes) {
+				if (subpath.boundingBox.isInsideOf(boundingBox)) {
+					subpath.isEnclosed = true;
+					break;
+				}
+			}
+			subpath.points = subpath.points.map((point) => {
+				return new Point(
+					this.transform.apply(point.position),
+					this.transform.apply(point.normal)
+				);
 			});
-			if (isInside) section.fullyInside = true;
-			this.sections.push(section);
+			this.subpaths.push(subpath);
 		}
-		return this.sections;
-	};
-
-	getStrokeColor = (): string => {
-		return this.style.stroke;
-	};
-
-	getFillColor = (): string | null => {
-		return this.style.fill;
 	};
 }
 

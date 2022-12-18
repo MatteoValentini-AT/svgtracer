@@ -1,111 +1,179 @@
-import TransformMatrix from './TransformMatrix.js';
-
 class Vector2D {
-	constructor(public x: number, public y: number) {}
+	public x: number;
+	public y: number;
 
-	add = (x: number, y: number): Vector2D => {
-		this.x += x;
-		this.y += y;
-		return this;
+	constructor(x: number | Vector2D, y?: number) {
+		if (x instanceof Vector2D) {
+			this.x = x.x;
+			this.y = x.y;
+		} else {
+			this.x = x;
+			this.y = y ? y : x;
+		}
+	}
+
+	add = (x: number | Vector2D, y?: number): Vector2D => {
+		if (x instanceof Vector2D) return new Vector2D(this.x + x.x, this.y + x.y);
+		else return new Vector2D(this.x + x, this.y + (y ? y : x));
 	};
 
-	addVector = (vector: Vector2D): Vector2D => {
-		this.x += vector.x;
-		this.y += vector.y;
-		return this;
+	subtract = (x: number | Vector2D, y?: number): Vector2D => {
+		if (x instanceof Vector2D) return new Vector2D(this.x - x.x, this.y - x.y);
+		else return new Vector2D(this.x - x, this.y - (y ? y : x));
 	};
 
-	sub = (x: number, y: number): Vector2D => {
-		this.x -= x;
-		this.y -= y;
-		return this;
+	multiply = (scale: number): Vector2D => {
+		return new Vector2D(this.x * scale, this.y * scale);
 	};
 
-	subVector = (vector: Vector2D): Vector2D => {
-		this.x -= vector.x;
-		this.y -= vector.y;
-		return this;
-	};
-
-	set = (x: number, y: number): Vector2D => {
-		this.x = x;
-		this.y = y;
-		return this;
-	};
-
-	scale = (scale: number): Vector2D => {
-		this.x *= scale;
-		this.y *= scale;
-		return this;
+	length = (): number => {
+		return Math.sqrt(this.x * this.x + this.y * this.y);
 	};
 
 	normalize = (): Vector2D => {
-		const length = Math.sqrt(this.x * this.x + this.y * this.y);
-		this.x /= length;
-		this.y /= length;
-		return this;
+		return this.multiply(1 / this.length());
 	};
 
-	normalizedNormal = (): Vector2D => {
-		const length = Math.sqrt(this.x * this.x + this.y * this.y);
-		return new Vector2D(-this.y / length, this.x / length);
+	dot = (x: number | Vector2D, y?: number): number => {
+		if (x instanceof Vector2D) return this.x * x.x + this.y * x.y;
+		else return this.x * x + this.y * (y ? y : x);
 	};
 
-	applyTransform = (transform: TransformMatrix): Vector2D => {
-		const x =
-			this.x * transform.getMatrix()[0][0] +
-			this.y * transform.getMatrix()[0][1] +
-			transform.getMatrix()[0][2];
-		const y =
-			this.x * transform.getMatrix()[1][0] +
-			this.y * transform.getMatrix()[1][1] +
-			transform.getMatrix()[1][2];
-		this.x = x;
-		this.y = y;
-		return this;
+	normalVector = (): Vector2D => {
+		return new Vector2D(-this.y, this.x);
 	};
 
-	equals = (vector: Vector2D): boolean => {
-		return this.x === vector.x && this.y === vector.y;
+	equals = (v: Vector2D): boolean => {
+		return this.x === v.x && this.y === v.y;
 	};
-
-	clone = (): Vector2D => new Vector2D(this.x, this.y);
 }
 
 class Point {
-	constructor(public position: Vector2D, public normal: Vector2D) {}
+	public position: Vector2D;
+	public normal: Vector2D;
 
-	applyTransform = (transform: TransformMatrix): Point => {
-		this.position.applyTransform(transform);
-		this.normal.applyTransform(transform).normalize();
-		return this;
-	};
+	constructor(position: Vector2D, normal: Vector2D) {
+		this.position = position;
+		this.normal = normal;
+	}
+}
 
-	clone = (): Point => new Point(this.position.clone(), this.normal.clone());
+class Rectangle {
+	public position: Vector2D;
+	public size: Vector2D;
+
+	constructor(
+		fromX: Vector2D | number,
+		fromY: Vector2D | number,
+		toX?: number,
+		toY?: number
+	) {
+		if (fromX instanceof Vector2D && fromY instanceof Vector2D) {
+			this.position = fromX;
+			this.size = fromY.subtract(fromX);
+		} else {
+			this.position = new Vector2D(fromX as number, fromY as number);
+			this.size = new Vector2D(toX as number, toY as number);
+		}
+	}
 }
 
 class BoundingBox {
-	constructor(
-		public min: Vector2D = new Vector2D(Infinity, Infinity),
-		public max: Vector2D = new Vector2D(-Infinity, -Infinity)
-	) {}
+	public min: Vector2D = new Vector2D(Infinity, Infinity);
+	public max: Vector2D = new Vector2D(-Infinity, -Infinity);
 
-	expand = (point: Vector2D): BoundingBox => {
+	expand = (point: Vector2D): void => {
 		this.min.x = Math.min(this.min.x, point.x);
 		this.min.y = Math.min(this.min.y, point.y);
 		this.max.x = Math.max(this.max.x, point.x);
 		this.max.y = Math.max(this.max.y, point.y);
-		return this;
 	};
 
-	isInsideOf = (bb: BoundingBox): boolean => {
+	isInsideOf = (boundingBox: BoundingBox): boolean => {
 		return (
-			this.min.x >= bb.min.x &&
-			this.min.y >= bb.min.y &&
-			this.max.x <= bb.max.x &&
-			this.max.y <= bb.max.y
+			this.min.x >= boundingBox.min.x &&
+			this.min.y >= boundingBox.min.y &&
+			this.max.x <= boundingBox.max.x &&
+			this.max.y <= boundingBox.max.y
 		);
 	};
 }
 
-export { Vector2D, Point, BoundingBox };
+// | a c e |
+// | b d f |
+class TransformMatrix {
+	public a: number;
+	public b: number;
+	public c: number;
+	public d: number;
+	public e: number;
+	public f: number;
+
+	constructor(
+		a: number | TransformMatrix | undefined = undefined,
+		b: number | undefined = undefined,
+		c: number | undefined = undefined,
+		d: number | undefined = undefined,
+		e: number | undefined = undefined,
+		f: number | undefined = undefined
+	) {
+		if (a instanceof TransformMatrix) {
+			this.a = a.a;
+			this.b = a.b;
+			this.c = a.c;
+			this.d = a.d;
+			this.e = a.e;
+			this.f = a.f;
+		} else if (a !== undefined) {
+			this.a = a;
+			this.b = b ? b : 0;
+			this.c = c ? c : 0;
+			this.d = d ? d : a;
+			this.e = e ? e : 0;
+			this.f = f ? f : 0;
+		} else {
+			this.a = 1;
+			this.b = 0;
+			this.c = 0;
+			this.d = 1;
+			this.e = 0;
+			this.f = 0;
+		}
+	}
+
+	apply = (x: number | Vector2D, y?: number): Vector2D => {
+		if (x instanceof Vector2D)
+			return new Vector2D(
+				this.a * x.x + this.c * x.y + this.e,
+				this.b * x.x + this.d * x.y + this.f
+			);
+		else
+			return new Vector2D(
+				this.a * x + this.c * (y ? y : x) + this.e,
+				this.b * x + this.d * (y ? y : x) + this.f
+			);
+	};
+
+	translate = (x: number | Vector2D, y?: number): TransformMatrix => {
+		if (x instanceof Vector2D)
+			return new TransformMatrix(
+				this.a,
+				this.b,
+				this.c,
+				this.d,
+				this.e + x.x,
+				this.f + x.y
+			);
+		else
+			return new TransformMatrix(
+				this.a,
+				this.b,
+				this.c,
+				this.d,
+				this.e + x,
+				this.f + (y ? y : x)
+			);
+	};
+}
+
+export { Vector2D, Point, Rectangle, BoundingBox, TransformMatrix };
